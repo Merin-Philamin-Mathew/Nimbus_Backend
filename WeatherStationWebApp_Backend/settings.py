@@ -127,6 +127,7 @@ CORS_ALLOW_METHODS =  [
 
 CORS_ALLOWED_ORIGINS = [
     'https://nimbus.merinphilamin.site',
+    'https://api-nimbus.merinphilamin.site',
     'http://localhost:5173'
 ]
 # CSRF_TRUSTED_ORIGINS = [
