@@ -55,7 +55,6 @@ INSTALLED_APPS = [
 # Add these settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-SECURE_SSL_REDIRECT = True
 
 
 
@@ -126,9 +125,16 @@ CORS_ALLOW_METHODS =  [
     "PUT",
 ]
 
-
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+CORS_ALLOWED_ORIGINS = [
+    'https://nimbus.merinphilamin.site',
+    'http://localhost:5173'
+]
+# CSRF_TRUSTED_ORIGINS = [
+#     'https://nimbus.merinphilamin.site',
+#     'http://localhost:5173'
+# ]
+# CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
+# CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Ensures Django can authenticate users
