@@ -1,9 +1,11 @@
 import requests
-from rest_framework import status
+import logging
+from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .serializers import CustomTokenObtainPairSerializer, UserSerializer
 from .models import CustomUser
 
@@ -70,6 +72,8 @@ class GoogleLoginView(APIView):
             'full_name': full_name,
             'profile_url': profile_url
         })
+        if user.is_staff:
+            return Response({'message': 'Admin login required'}, status=status.HTTP_403_FORBIDDEN)
 
         if not user.is_active:
             return Response({'message': 'You are blocked by admin'}, status=status.HTTP_403_FORBIDDEN)
@@ -82,3 +86,81 @@ class GoogleLoginView(APIView):
             'access': str(refresh.access_token),
             'user': UserSerializer(user).data
         }, status=status.HTTP_200_OK)
+    
+
+class UserListView(generics.ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = UserSerializer
+    queryset = CustomUser.objects.all().order_by('-date_joined')
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = UserSerializer
+    queryset = CustomUser.objects.all()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_superuser:
+            return Response(
+                {"error": "Cannot delete superuser accounts"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_superuser and not request.user.is_superuser:
+            return Response(
+                {"error": "Only superusers can modify superuser accounts"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
+
+
+
+logger = logging.getLogger(__name__)
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        try:
+            refresh_token = request.data.get('refresh', '')
+            logger.info(f"Refresh token received: {refresh_token[:10]}...")
+
+            response = super().post(request, *args, **kwargs)
+            
+            logger.info("Token refresh successful")
+            return response
+
+        except TokenError as e:
+            logger.error(f"Token refresh failed: {str(e)}")
+            return Response({
+                'error': 'Invalid refresh token',
+                'detail': str(e)
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        except Exception as e:
+            logger.error(f"Unexpected error in token refresh: {str(e)}")
+            return Response({
+                'error': 'Token refresh failed',
+                'detail': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+class ToggleUserActiveStatusView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'User ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_active = not user.is_active
+        user.save()
+
+        return Response({'message': 'User status updated successfully'}, status=status.HTTP_200_OK)
