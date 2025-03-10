@@ -132,17 +132,6 @@ GOOGLE_OAUTH_CLIENT_ID=your_google_client_id
 GOOGLE_OAUTH_CLIENT_SECRET=your_google_client_secret
 ```
 
-## 📡 API Endpoints
-
-### Authentication
-- `POST /api/auth/google/`: Google OAuth login
-- `POST /api/auth/logout/`: User logout
-
-### Weather Data
-- `GET /api/weather/current/`: Get current weather
-- `GET /api/weather/forecast/`: Get weather forecast
-- `GET /api/weather/analytics/`: Get weather analytics
-
 ## 🔍 Monitoring
 
 Check service status:
